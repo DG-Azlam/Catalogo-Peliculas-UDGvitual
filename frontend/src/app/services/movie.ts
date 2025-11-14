@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 export interface Movie {
   id: number;
@@ -24,7 +23,9 @@ interface ApiResponse<T> {
 })
 export class MovieService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/movies';
+  
+  // URL relativa - funciona en desarrollo y producción
+  private apiUrl = '/api/movies';
 
   getMovies(): Observable<ApiResponse<Movie[]>> {
     return this.http.get<ApiResponse<Movie[]>>(this.apiUrl).pipe(
