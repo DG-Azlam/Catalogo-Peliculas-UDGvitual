@@ -10,8 +10,8 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
-      - key: LOG_CHANNEL
-        value: stderr
+      - key: NODE_ENV
+        value: production
       - fromDatabase:
           name: catalogo-peliculas-db
           property: connectionString
