@@ -1,60 +1,37 @@
-# Stage 1: Build Angular frontend with Node 22.19
+# Stage 1: Build Angular frontend
 FROM node:22.19-alpine as angular-build
 
 WORKDIR /app/frontend
-
-# Copy package files
 COPY frontend/package*.json ./
-
-# Clean install
 RUN npm ci --legacy-peer-deps
-
-# Copy frontend source code
 COPY frontend/ .
 
-# Build SIN archivos de server - forzar solo cliente
-RUN npx ng build --configuration=production --no-ssr
+# Build Angular
+RUN npx ng build --configuration=production --base-href="/"
 
-# Stage 2: Build Laravel backend with frontend
+# DEBUG: Ver qué se generó
+RUN echo "=== ESTRUCTURA DEL BUILD ===" && \
+    find dist/catalogo_frontend/browser/ -type f -name "*.html" | head -10 && \
+    echo "=== ARCHIVOS EN BROWSER/ ===" && \
+    ls -la dist/catalogo_frontend/browser/
+
+# Stage 2: Laravel + Angular
 FROM php:8.2-fpm
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev \
-    zip unzip libpq-dev nginx
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
-
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
+RUN apt-get update && apt-get install -y nginx
 WORKDIR /var/www
-
-# Copy Laravel backend
 COPY backend/ .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-# Copy built Angular frontend 
+# Copiar Angular al public de Laravel
 COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/storage
-RUN chown -R www-data:www-data /var/www/bootstrap/cache
-RUN chmod -R 775 /var/www/storage
-RUN chmod -R 775 /var/www/bootstrap/cache
+# VERIFICAR que todo esté correcto
+RUN echo "=== ESTRUCTURA FINAL ===" && \
+    ls -la /var/www/public/ && \
+    echo "=== ¿index.html EN RAÍZ? ===" && \
+    test -f /var/www/public/index.html && echo "✅ index.html EN RAÍZ" || echo "❌ index.html NO ENCONTRADO"
 
-# Copy nginx configuration
 COPY docker/nginx.conf /etc/nginx/sites-available/default
-
-# Expose port
 EXPOSE 10000
 
-# Startup script
-CMD sh -c "php artisan config:cache && \
-           php artisan route:cache && \
-           php artisan migrate --force && \
-           nginx -g 'daemon off;' & php-fpm"
+CMD sh -c "nginx -g 'daemon off;' & php-fpm"
