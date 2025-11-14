@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: Catalogo-Peliculas-UDGvitual-docker
+    name: Catalogo-Peliculas-UDGvitual
     plan: free
     region: oregon
     docker:
