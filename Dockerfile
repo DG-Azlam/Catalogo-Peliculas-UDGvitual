@@ -1,37 +1,43 @@
-# Stage 1: Build Angular frontend
+# Stage 1: Build Angular
 FROM node:22.19-alpine as angular-build
 
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci --legacy-peer-deps
 COPY frontend/ .
+RUN npm ci --legacy-peer-deps
 
 # Build Angular
 RUN npx ng build --configuration=production --base-href="/"
 
-# DEBUG: Ver qué se generó
-RUN echo "=== ESTRUCTURA DEL BUILD ===" && \
-    find dist/catalogo_frontend/browser/ -type f -name "*.html" | head -10 && \
-    echo "=== ARCHIVOS EN BROWSER/ ===" && \
+# FORZAR estructura correcta
+RUN echo "=== CORRIGIENDO ESTRUCTURA ===" && \
+    # Buscar dónde está realmente index.html
+    FIND_RESULT=$(find dist/ -name "index.html" | head -1) && \
+    echo "index.html encontrado en: $FIND_RESULT" && \
+    # Si no está en browser/, copiarlo allí
+    if [ ! -f "dist/catalogo_frontend/browser/index.html" ]; then \
+        echo "📁 Moviendo index.html a posición correcta..." && \
+        cp "$FIND_RESULT" dist/catalogo_frontend/browser/ && \
+        echo "✅ index.html movido"; \
+    else \
+        echo "✅ index.html ya está en posición correcta"; \
+    fi && \
+    # Verificar estructura final
+    echo "=== ESTRUCTURA CORREGIDA ===" && \
     ls -la dist/catalogo_frontend/browser/
 
-# Stage 2: Laravel + Angular
-FROM php:8.2-fpm
+# Stage 2: Servir
+FROM nginx:alpine
 
-RUN apt-get update && apt-get install -y nginx
-WORKDIR /var/www
-COPY backend/ .
+# Copiar SOLO Angular (sin Laravel temporalmente)
+COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /usr/share/nginx/html/
 
-# Copiar Angular al public de Laravel
-COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
+# Configuración Nginx simple
+RUN echo 'server { \
+    listen 10000; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { try_files \$uri \$uri/ /index.html; } \
+    }' > /etc/nginx/conf.d/default.conf
 
-# VERIFICAR que todo esté correcto
-RUN echo "=== ESTRUCTURA FINAL ===" && \
-    ls -la /var/www/public/ && \
-    echo "=== ¿index.html EN RAÍZ? ===" && \
-    test -f /var/www/public/index.html && echo "✅ index.html EN RAÍZ" || echo "❌ index.html NO ENCONTRADO"
-
-COPY docker/nginx.conf /etc/nginx/sites-available/default
 EXPOSE 10000
-
-CMD sh -c "nginx -g 'daemon off;' & php-fpm"
+CMD ["nginx", "-g", "daemon off;"]
