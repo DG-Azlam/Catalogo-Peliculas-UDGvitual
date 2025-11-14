@@ -1,8 +1,8 @@
-import { BootstrapContext, bootstrapApplication } from '@angular/platform-browser';
+import { bootstrapApplication } from '@angular/platform-browser';
 import { App } from './app/app';
 import { config } from './app/app.config.server';
 
-const bootstrap = (context: BootstrapContext) =>
-    bootstrapApplication(App, config, context);
+// Elimina BootstrapContext para desactivar prerendering
+const bootstrap = () => bootstrapApplication(App, config);
 
 export default bootstrap;
