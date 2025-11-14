@@ -6,14 +6,14 @@ WORKDIR /app/frontend
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Clean install
+RUN npm ci --legacy-peer-deps
 
 # Copy frontend source code
 COPY frontend/ .
 
-# Build Angular app como static (sin SSR)
-RUN npm run build -- --configuration=production
+# Build SIN prerendering
+RUN npx ng build --configuration=production
 
 # Stage 2: Build Laravel backend with frontend
 FROM php:8.2-fpm
@@ -38,8 +38,7 @@ COPY backend/ .
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy built Angular frontend to Laravel public directory
-# Para Angular 19 con outputMode: static
+# Copy built Angular frontend 
 COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
 
 # Set permissions
