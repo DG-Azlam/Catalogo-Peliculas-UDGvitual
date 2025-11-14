@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: catalogo-peliculas-app
+    name: catalogo-peliculas-udgvitual
     plan: free
     region: oregon
     docker:
@@ -10,8 +10,8 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
-      - key: NODE_ENV
-        value: production
+      - key: APP_URL
+        value: https://catalogo-peliculas-udgvitual.onrender.com
       - fromDatabase:
           name: catalogo-peliculas-db
           property: connectionString
