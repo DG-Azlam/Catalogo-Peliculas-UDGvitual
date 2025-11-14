@@ -12,7 +12,7 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ .
 
-# Build Angular app with SSR
+# Build Angular app como static (sin SSR)
 RUN npm run build -- --configuration=production
 
 # Stage 2: Build Laravel backend with frontend
@@ -39,7 +39,7 @@ COPY backend/ .
 RUN composer install --no-dev --optimize-autoloader
 
 # Copy built Angular frontend to Laravel public directory
-# Para Angular 17 con SSR, copia el contenido del dist del browser
+# Para Angular 19 con outputMode: static
 COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
 
 # Set permissions
