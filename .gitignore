@@ -1,0 +1,118 @@
+# ========== LARAVEL (Backend) ==========
+/backend/vendor/
+/backend/.env
+/backend/.env.backup
+/backend/.phpunit.result.cache
+/backend/homestead.yaml
+/backend/homestead.json
+/backend/.vagrant
+/backend/nginx.conf
+/backend/.styleci.yml
+
+# Storage y cache de Laravel
+/backend/storage/framework/cache/
+/backend/storage/framework/views/
+/backend/storage/framework/sessions/
+/backend/storage/logs/
+/backend/storage/app/public/*
+!/backend/storage/app/public/.gitkeep
+
+# Bootstrap cache
+/backend/bootstrap/cache/
+
+# Archivos de IDE
+/backend/.idea/
+/backend/.vscode/
+/backend/*.swp
+/backend/*.swo
+
+# Archivos de sistema
+/backend/.DS_Store
+/backend/Thumbs.db
+
+# ========== ANGULAR (Frontend) ==========
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/
+/frontend/.vscode/
+/frontend/.idea/
+
+# Logs de Angular y npm
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/*.log
+
+# Cache de Angular
+/frontend/.cache/
+
+# Archivos de cobertura de tests
+/frontend/coverage/
+
+# ========== COMPOSER & NPM ==========
+# Composer - no subir vendor, pero SÍ composer.lock
+# /backend/vendor/ (ya incluido arriba)
+
+# NPM - no subir node_modules
+# /frontend/node_modules/ (ya incluido arriba)
+
+# Archivos de lock (estos SÍ se suben)
+# /backend/composer.lock ✅ SUBIR
+# /frontend/package-lock.json ✅ SUBIR (o yarn.lock)
+
+# ========== DOCKER ==========
+.dockerignore
+docker-compose.override.yml
+docker-compose.yml.backup
+
+# ========== RENDER ==========
+.render.yaml.local
+.render.yaml.backup
+
+# ========== SISTEMA OPERATIVO ==========
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ========== ARCHIVOS TEMPORALES ==========
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# ========== LOGS ==========
+*.log
+logs/
+
+# ========== IDE ESPECÍFICAS ==========
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PHPStorm
+.idea/
+*.iws
+
+# Sublime Text
+*.sublime-*
+
+# ========== ARCHIVOS DE USUARIO ==========
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
