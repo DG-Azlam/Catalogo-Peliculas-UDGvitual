@@ -1,4 +1,4 @@
-# ========== DOCKERFILE - LARAVEL + ANGULAR ==========
+# ========== DOCKERFILE ==========
 FROM php:8.2-apache
 
 # Instalar Node.js 22 para Angular
@@ -20,81 +20,115 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd
 
-# Limpiar cache para reducir tamaño de imagen
+# Limpiar cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Configurar Apache para Laravel
+# Configurar Apache
 RUN a2enmod rewrite
-
-# Configurar virtual host
 RUN echo '<VirtualHost *:80>\n\
-    ServerAdmin webmaster@localhost\n\
     DocumentRoot /var/www/html/public\n\
-    \n\
     <Directory /var/www/html/public>\n\
         AllowOverride All\n\
         Require all granted\n\
-        Options Indexes FollowSymLinks\n\
     </Directory>\n\
-    \n\
-    ErrorLog ${APACHE_LOG_DIR}/error.log\n\
-    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Directorio de trabajo principal
+# Directorio de trabajo
 WORKDIR /var/www/html
 
-# ========== COPIAR Y CONFIGURAR LARAVEL ==========
+# ========== CONFIGURAR LARAVEL ==========
 COPY backend/ .
-
-# Instalar dependencias de Laravel y optimizar
 RUN composer install --no-dev --optimize-autoloader
-
-# Cache de Laravel para mejor rendimiento
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan view:cache
 
-# ========== CONSTRUIR ANGULAR CON FALLBACKS ==========
+# ========== SOLUCIÓN DEFINITIVA PARA ANGULAR ==========
 WORKDIR /tmp/frontend
-
-# Copiar todo el frontend de Angular
 COPY frontend/ .
-
-# Instalar dependencias de Angular
 RUN npm install
 
-# BUILD CON MÚLTIPLES FALLBACKS
-RUN echo "=== INICIANDO BUILD DE ANGULAR ===" && \
-    # Intento 1: Build normal con prerendering (tu configuración original)
-    (echo "Intento 1: Build con prerendering..." && \
-     npx ng build --configuration=production || \
-     # Intento 2: Sin prerendering
-     (echo "Intento 2: Build sin prerendering..." && \
-      npx ng build --configuration=production --prerender=false || \
-      # Intento 3: Solo build básico de producción
-      (echo "Intento 3: Build básico de producción..." && \
-       npx ng build --configuration=production --no-prerender || \
-       # Intento 4: Último recurso - forzar build
-       (echo "Intento 4: Forzar build de producción..." && \
-        npx ng build --prod --aot true --build-optimizer true)))) && \
-    echo "=== BUILD DE ANGULAR COMPLETADO ==="
+# SOLUCIÓN: Deshabilitar SSR/Prerendering completamente
+RUN echo "=== DESHABILITANDO PRERENDERING EN CONFIGURACIÓN ==="
+
+# Método 1: Modificar angular.json temporalmente para deshabilitar prerendering
+RUN node -e "\
+const fs = require('fs');\
+const path = require('path');\
+\
+// Leer angular.json\
+const angularJsonPath = path.join(process.cwd(), 'angular.json');\
+let angularJson = JSON.parse(fs.readFileSync(angularJsonPath, 'utf8'));\
+\
+// Función para deshabilitar prerendering en todas las configuraciones\
+function disablePrerendering(config) {\
+    if (config.configurations && config.configurations.production) {\
+        config.configurations.production.prerender = false;\
+        delete config.configurations.production.ssr;\
+        delete config.configurations.production.prerender;\\
+    }\
+    if (config.options) {\
+        delete config.options.prerender;\
+        delete config.options.ssr;\
+    }\
+}\
+\
+// Aplicar a build configuration\
+if (angularJson.projects?.frontend?.architect?.build) {\
+    disablePrerendering(angularJson.projects.frontend.architect.build);\
+}\
+\
+// Eliminar configuraciones de server y prerender si existen\
+if (angularJson.projects?.frontend?.architect?.server) {\
+    delete angularJson.projects.frontend.architect.server;\
+}\\
+if (angularJson.projects?.frontend?.architect?.prerender) {\
+    delete angularJson.projects.frontend.architect.prerender;\
+}\
+\
+// Guardar cambios\
+fs.writeFileSync(angularJsonPath, JSON.stringify(angularJson, null, 2));\
+console.log('✅ Prerendering deshabilitado en angular.json');\
+"
+
+# Método 2: También modificar package.json scripts si es necesario
+RUN node -e "\
+const fs = require('fs');\
+const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));\
+\
+// Reemplazar scripts de build para evitar prerendering\
+if (packageJson.scripts) {\
+    if (packageJson.scripts.build) {\
+        packageJson.scripts.build = packageJson.scripts.build.replace(/--prerender/g, '');\
+    }\
+    if (packageJson.scripts['build:prod']) {\
+        packageJson.scripts['build:prod'] = 'ng build --configuration=production';\
+    }\
+}\
+\
+fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2));\
+console.log('✅ Scripts de build actualizados');\
+"
+
+# Ahora construir Angular SIN prerendering
+RUN echo "=== CONSTRUYENDO ANGULAR ==="
+RUN npx ng build --configuration=production
+
+# Verificar que el build se creó correctamente
+RUN ls -la dist/ && echo "✅ Build de Angular completado"
 
 # ========== PREPARAR APLICACIÓN FINAL ==========
 WORKDIR /var/www/html
 
-# Copiar build de Angular al directorio público de Laravel
+# Copiar build de Angular al public de Laravel
 RUN cp -r /tmp/frontend/dist/frontend/* public/
 
-# Configurar permisos para Laravel
+# Configurar permisos
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 storage bootstrap/cache
-
-# Crear archivo health check
-RUN echo "<?php echo 'Application is running'; ?>" > public/health.php
 
 # Exponer puerto
 EXPOSE 80
