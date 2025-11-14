@@ -28,3 +28,9 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+
+# ========== ANGULAR ========== #
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/
+/frontend/*.log
