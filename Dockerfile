@@ -12,8 +12,8 @@ RUN npm ci --legacy-peer-deps
 # Copy frontend source code
 COPY frontend/ .
 
-# Build SIN prerendering
-RUN npx ng build --configuration=production
+# Build SIN archivos de server - forzar solo cliente
+RUN npx ng build --configuration=production --no-ssr
 
 # Stage 2: Build Laravel backend with frontend
 FROM php:8.2-fpm
