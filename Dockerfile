@@ -12,8 +12,8 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ .
 
-# Build Angular app - FORZAR no prerender
-RUN npm run build -- --configuration=production --no-prerender
+# SOLUCIÓN DEFINITIVA: Build SIN archivos de server
+RUN npx ng build --configuration=production --prerender=false
 
 # Stage 2: Build Laravel backend with frontend
 FROM php:8.2-fpm
