@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: catalogo-peliculas-udgvitual
+    name: catalogo-peliculas-completo
+    env: docker
     plan: free
-    region: oregon
     docker:
-      dockerfilePath: ./Dockerfile
+      dockerfile: Dockerfile
     envVars:
       - key: APP_ENV
         value: production
@@ -12,13 +12,6 @@ services:
         value: false
       - key: APP_URL
         value: https://catalogo-peliculas-udgvitual.onrender.com
-      - fromDatabase:
-          name: catalogo-peliculas-db
-          property: connectionString
-
-databases:
-  - name: catalogo-peliculas-db
-    plan: free
-    region: oregon
-    databaseName: catalogo_peliculas
-    user: catalogo_user
+      - key: LOG_CHANNEL
+        value: stderr
+    numInstances: 1
