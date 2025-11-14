@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: Catalogo-Peliculas-UDGvitual
+    name: catalogo-peliculas-app
     plan: free
     region: oregon
     docker:
@@ -10,6 +10,15 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
-      - key: NODE_ENV
-        value: production
+      - key: LOG_CHANNEL
+        value: stderr
+      - fromDatabase:
+          name: catalogo-peliculas-db
+          property: connectionString
 
+databases:
+  - name: catalogo-peliculas-db
+    plan: free
+    region: oregon
+    databaseName: catalogo_peliculas
+    user: catalogo_user
