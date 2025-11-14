@@ -1,0 +1,168 @@
+<div class="min-vh-100 bg-dark py-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        
+        <!-- Header con botón volver -->
+        <div class="d-flex align-items-center mb-4">
+          <button class="btn btn-outline-light me-3" (click)="goBack()">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <h1 class="text-white mb-0">Crear Nueva Película</h1>
+        </div>
+
+        <!-- Tarjeta del formulario -->
+        <div class="card shadow-lg border-0">
+          <div class="card-header bg-success text-white py-3">
+            <h4 class="mb-0">
+              <i class="fas fa-plus-circle me-2"></i>
+              Información de la Película
+            </h4>
+          </div>
+
+          <div class="card-body p-4">
+            <!-- Estado de carga -->
+            @if (loading()) {
+              <div class="text-center py-4">
+                <div class="spinner-border text-success" role="status"></div>
+                <p class="text-muted mt-2">Creando película...</p>
+              </div>
+            }
+
+            <!-- Mensaje de error -->
+            @if (error()) {
+              <div class="alert alert-danger d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span>{{ error() }}</span>
+              </div>
+            }
+
+            <!-- Formulario -->
+            @if (!loading()) {
+              <form (ngSubmit)="onSubmit()" #movieForm="ngForm">
+                
+                <!-- Campo: Título -->
+                <div class="mb-3">
+                  <label class="form-label fw-bold">Título *</label>
+                  <input
+                    type="text"
+                    class="form-control form-control-lg"
+                    [(ngModel)]="movie().title"
+                    name="title"
+                    required
+                    maxlength="255"
+                    #title="ngModel"
+                  >
+                  @if (title.invalid && title.touched) {
+                    <div class="text-danger small mt-1">El título es requerido</div>
+                  }
+                </div>
+
+                <!-- Campo: Año -->
+                <div class="mb-3">
+                  <label class="form-label fw-bold">Año *</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    [(ngModel)]="movie().year"
+                    name="year"
+                    required
+                    min="1900"
+                    max="2030"
+                    #year="ngModel"
+                  >
+                  @if (year.invalid && year.touched) {
+                    <div class="text-danger small mt-1">El año debe estar entre 1900 y 2030</div>
+                  }
+                </div>
+
+                <!-- Campo: URL de Portada -->
+                <div class="mb-3">
+                  <label class="form-label fw-bold">URL de la Portada *</label>
+                  <input
+                    type="url"
+                    class="form-control"
+                    [(ngModel)]="movie().cover"
+                    name="cover"
+                    required
+                    placeholder="Ej: https://ejemplo.com/poster.jpg"
+                    #cover="ngModel"
+                  >
+                  @if (cover.invalid && cover.touched) {
+                    <div class="text-danger small mt-1">La URL de portada es requerida</div>
+                  }
+                  
+                  <!-- Vista previa de la imagen -->
+                  @if (movie().cover) {
+                    <div class="mt-2">
+                      <small class="text-muted">Vista previa:</small>
+                      <div class="mt-1">
+                        <img 
+                          [src]="movie().cover" 
+                          alt="Vista previa de portada" 
+                          class="img-thumbnail"
+                          style="max-height: 150px; max-width: 100%;"
+                          (error)="movie().cover = ''"
+                        >
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Campo: Sinopsis -->
+                <div class="mb-4">
+                  <label class="form-label fw-bold">Sinopsis *</label>
+                  <textarea
+                    class="form-control"
+                    rows="5"
+                    [(ngModel)]="movie().synopsis"
+                    name="synopsis"
+                    required
+                    maxlength="500"
+                    placeholder="Describe la trama de la película..."
+                    #synopsis="ngModel"
+                  ></textarea>
+                  @if (synopsis.invalid && synopsis.touched) {
+                    <div class="text-danger small mt-1">La sinopsis es requerida</div>
+                  }
+                  <div class="text-muted small mt-1">
+                    {{ movie().synopsis.length }}/500 caracteres
+                  </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex gap-2 justify-content-end pt-3 border-top">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="goBack()"
+                    [disabled]="loading()"
+                  >
+                    <i class="fas fa-times me-1"></i>Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    class="btn btn-success"
+                    [disabled]="!canSubmit()"
+                  >
+                    <i class="fas fa-save me-1"></i>
+                    {{ loading() ? 'Creando...' : 'Crear Película' }}
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="mt-3">
+          <p class="text-muted small">
+            <i class="fas fa-info-circle me-1"></i>
+            Todos los campos marcados con * son obligatorios.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

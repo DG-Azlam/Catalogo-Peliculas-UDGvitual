@@ -1,0 +1,90 @@
+<div class="min-vh-100 bg-dark">
+  <div class="container py-4">
+    <!-- Botón volver y editar -->
+    <div class="d-flex gap-2 mt-4">
+      <button class="btn btn-outline-light" (click)="goBack()">
+        <i class="fas fa-arrow-left me-1"></i>Volver al catálogo
+      </button>
+      <button class="btn btn-warning" (click)="editMovie()">
+        <i class="fas fa-edit me-1"></i>Editar Película
+      </button>
+    </div>
+
+    <!-- Loading -->
+    @if (loading()) {
+      <div class="d-flex justify-content-center align-items-center py-5">
+        <div class="text-center text-white">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="h5">Cargando información de la película...</p>
+        </div>
+      </div>
+    }
+
+    <!-- Detalles de la película -->
+    @if (!loading() && movie()) {
+      <div class="card shadow-lg border-0 overflow-hidden">
+        <!-- Header -->
+        <div class="card-header bg-primary bg-gradient text-white py-4">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <img 
+                [src]="movie()!.cover || 'assets/default-cover.jpg'" 
+                [alt]="movie()!.title"
+                class="img-fluid rounded shadow"
+                (error)="movie()!.cover = 'assets/default-cover.jpg'"
+              >
+            </div>
+            
+            <div class="col-md-8">
+              <div class="d-flex align-items-center mb-3">
+                <h1 class="card-title h2 mb-0 me-3">{{ movie()!.title }}</h1>
+                <span class="badge bg-danger fs-6">{{ movie()!.year }}</span>
+              </div>
+              
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <div class="d-flex justify-content-between border-bottom pb-2">
+                    <strong class="text-warning">Título:</strong>
+                    <span>{{ movie()!.title }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="d-flex justify-content-between border-bottom pb-2">
+                    <strong class="text-warning">Año:</strong>
+                    <span>{{ movie()!.year }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sinopsis -->
+        <div class="card-body p-4">
+          <h3 class="h4 text-primary mb-3">
+            <i class="fas fa-file-text me-2"></i>Sinopsis
+          </h3>
+          <div class="bg-light rounded p-4 border-start border-primary border-4">
+            <p class="mb-0 text-dark lh-lg">{{ movie()!.synopsis }}</p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Película no encontrada -->
+    @if (!loading() && !movie()) {
+      <div class="card shadow-lg border-0 text-center py-5">
+        <div class="card-body">
+          <i class="fas fa-film fa-4x text-muted mb-3"></i>
+          <h2 class="h3 text-danger mb-3">Película no encontrada</h2>
+          <p class="text-muted mb-4">La película que buscas no existe en el catálogo.</p>
+          <button class="btn btn-primary" (click)="goBack()">
+            Volver al catálogo
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

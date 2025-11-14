@@ -1,0 +1,17 @@
+.movie-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.movie-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(30, 58, 138, 0.3) !important;
+}
+
+.card-img-top {
+  transition: transform 0.3s ease;
+}
+
+.movie-card:hover .card-img-top {
+  transform: scale(1.05);
+}

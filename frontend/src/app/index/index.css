@@ -1,0 +1,7 @@
+.background-image {
+    background: linear-gradient(135deg, rgba(30, 41, 59, .8) 0%, rgba(51, 65, 85, .8) 100%), 
+                url('https://thumbnails.genial.ly/60105ec879020565a7ec3731/screenshots/c2bcf269-a2aa-4b80-9716-e4c4cb70e584.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
