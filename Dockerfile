@@ -1,52 +1,60 @@
-# ========== DOCKERFILE CORREGIDO ==========
-FROM php:8.2-apache
+# Stage 1: Build Angular frontend with Node 22.19
+FROM node:22.19-alpine as angular-build
 
-# 1. Instalar Node.js 22 CORRECTAMENTE
-RUN apt-get update && apt-get install -y curl
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-RUN apt-get install -y nodejs
+WORKDIR /app/frontend
 
-# Verificar instalación
-RUN node --version && npm --version
+# Copy package files
+COPY frontend/package*.json ./
 
-# 2. Dependencias PHP
-RUN apt-get install -y \
-    git \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libpq-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    && docker-php-ext-install pdo pdo_pgsql mbstring zip gd
+# Install dependencies
+RUN npm ci
 
-# 3. Composer
+# Copy frontend source code
+COPY frontend/ .
+
+# Build Angular app
+RUN npm run build -- --configuration=production
+
+# Stage 2: Build Laravel backend with frontend
+FROM php:8.2-fpm
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git curl libpng-dev libonig-dev libxml2-dev \
+    zip unzip libpq-dev nginx
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
+
+# Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 4. Apache
-RUN a2enmod rewrite
-COPY backend/ /var/www/html/
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
-# 5. Permisos
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 storage bootstrap/cache
+# Copy Laravel backend
+COPY backend/ .
 
-# 6. Laravel
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
-RUN php artisan config:cache
-RUN php artisan route:cache
 
-# 7. Angular - CON NODE.JS FUNCIONANDO
-COPY frontend/ /tmp/frontend/
-WORKDIR /tmp/frontend
-RUN npm install
-RUN npx ng build --configuration=production
+# Copy built Angular frontend to Laravel public directory
+COPY --from=angular-build /app/frontend/dist/ /var/www/public/
 
-# 8. Combinar
-WORKDIR /var/www/html
-RUN cp -r /tmp/frontend/dist/frontend/* public/
+# Set permissions
+RUN chown -R www-data:www-data /var/www/storage
+RUN chown -R www-data:www-data /var/www/bootstrap/cache
+RUN chmod -R 775 /var/www/storage
+RUN chmod -R 775 /var/www/bootstrap/cache
 
-EXPOSE 80
-CMD sh -c "php artisan migrate --force && apache2-foreground"
+# Copy nginx configuration
+COPY docker/nginx.conf /etc/nginx/sites-available/default
+
+# Expose port
+EXPOSE 10000
+
+# Startup script
+CMD sh -c "php artisan config:cache && \
+           php artisan route:cache && \
+           php artisan migrate --force && \
+           nginx -g 'daemon off;' & php-fpm"
