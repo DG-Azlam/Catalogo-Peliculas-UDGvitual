@@ -23,25 +23,18 @@ WORKDIR /var/www/html
 RUN composer install --no-dev --optimize-autoloader
 RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
 
-# Angular - SIN PRERENDERING
+# Angular - SOLUCIÓN DIRECTA
 COPY frontend/ /tmp/frontend/
 WORKDIR /tmp/frontend
 RUN npm install
 
-# Eliminar prerendering
-RUN node -e "\
-const fs = require('fs');\n\
-let angularJson = JSON.parse(fs.readFileSync('angular.json', 'utf8'));\n\
-const projectName = Object.keys(angularJson.projects)[0];\n\
-delete angularJson.projects[projectName]?.architect?.server;\n\
-delete angularJson.projects[projectName]?.architect?.prerender;\n\
-fs.writeFileSync('angular.json', JSON.stringify(angularJson, null, 2));\n\
-"
+# Construir Angular con flags para evitar prerendering
+RUN npx ng build --configuration=production --no-prerender
 
-# Construir
-RUN npx ng build --configuration=production
+# Si falla, intentar build básico
+RUN if [ ! -d "dist" ]; then npx ng build; fi
 
-# Mover build
+# Mover build a Laravel
 WORKDIR /var/www/html
 RUN cp -r /tmp/frontend/dist/frontend/* public/
 
