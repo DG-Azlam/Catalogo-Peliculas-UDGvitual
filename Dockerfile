@@ -1,28 +1,21 @@
-# Stage 1: Build Angular con versiones específicas
+# Stage 1: Build Angular
 FROM node:22.19-alpine as angular-build
-
-# Instalar versiones específicas
-RUN npm install -g @angular/cli@20.3.5
 
 WORKDIR /app/frontend
 COPY frontend/ .
 
-# SOLUCIÓN: Usar npm install en lugar de npm ci
+# Instalar con legacy-peer-deps para evitar conflictos
 RUN npm install --legacy-peer-deps
 
+# Build con la configuración correcta
 RUN npx ng build --configuration=production --base-href="/"
-
-# Verificar estructura
-RUN echo "=== VERIFICANDO ESTRUCTURA ===" && \
-    find dist/ -name "index.html" && \
-    ls -la dist/
 
 # Stage 2: Build Laravel
 FROM php:8.2-fpm-alpine as laravel-build
 
 WORKDIR /var/www
 
-# Instalar dependencias del sistema
+# Instalar dependencias
 RUN apk add --no-cache \
     nginx \
     git \
@@ -36,14 +29,9 @@ RUN apk add --no-cache \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar composer files primero
-COPY backend/composer.json backend/composer.lock* ./
-
-# Instalar dependencias de Laravel
-RUN composer install --no-dev --optimize-autoloader --no-scripts
-
-# Copiar el resto del código
+# Copiar y instalar Laravel
 COPY backend/ .
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Configurar permisos
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
@@ -63,8 +51,7 @@ COPY --from=laravel-build /var/www/ .
 COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
 
 # Configurar PHP-FPM
-RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf && \
-    echo 'clear_env = no' >> /etc/php82/php-fpm.d/www.conf
+RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf
 
 # Configurar Nginx
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
