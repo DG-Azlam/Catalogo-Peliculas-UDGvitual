@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: catalogo-peliculas-completo
+    name: catalogo-peliculas-udgvitual
     env: docker
     plan: free
     docker:
@@ -14,4 +14,16 @@ services:
         value: https://catalogo-peliculas-udgvitual.onrender.com
       - key: LOG_CHANNEL
         value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: dpg-d4bgsnvpm1nc73bq8ph0-a
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: catalogo_5uy5
+      - key: DB_USERNAME
+        value: catalogo_5uy5_user
+      - key: DB_PASSWORD
+        value: U51sgIhJYXoyeTdPu214V9sdgd7XRkcS
     numInstances: 1

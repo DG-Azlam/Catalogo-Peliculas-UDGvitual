@@ -1,60 +1,91 @@
-# Stage 1: Build Angular frontend with Node 22.19
+# Stage 1: Build Angular con versiones específicas
 FROM node:22.19-alpine as angular-build
 
+# Instalar versiones específicas
+RUN npm install -g @angular/cli@20.3.5 npm@11.6.2
+
 WORKDIR /app/frontend
-
-# Copy package files
-COPY frontend/package*.json ./
-
-# Clean install
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --legacy-peer-deps
 
-# Copy frontend source code
 COPY frontend/ .
+RUN npx ng build --configuration=production --base-href="/"
 
-# Build SIN archivos de server - forzar solo cliente
-RUN npx ng build --configuration=production --no-ssr
+# Stage 2: Build Laravel
+FROM php:8.2-fpm-alpine as laravel-build
 
-# Stage 2: Build Laravel backend with frontend
-FROM php:8.2-fpm
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev \
-    zip unzip libpq-dev nginx
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
-
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
 WORKDIR /var/www
 
-# Copy Laravel backend
+# Instalar dependencias del sistema
+RUN apk add --no-cache \
+    nginx \
+    git \
+    unzip \
+    libpng-dev \
+    libzip-dev \
+    oniguruma-dev \
+    postgresql-dev \
+    && docker-php-ext-install pdo pdo_pgsql mbstring zip gd
+
+# Instalar Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copiar composer files primero
+COPY backend/composer.json backend/composer.lock* ./
+
+# Instalar dependencias de Laravel
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copiar el resto del código
 COPY backend/ .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Generar key de Laravel
+RUN php artisan key:generate --force
 
-# Copy built Angular frontend 
+# Configurar permisos
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+# Stage 3: Production
+FROM nginx:alpine
+
+# Instalar PHP-FPM
+RUN apk add --no-cache php82-fpm php82-pdo php82-pdo_pgsql php82-mbstring php82-zip php82-gd
+
+WORKDIR /var/www
+
+# Copiar Laravel
+COPY --from=laravel-build /var/www/ .
+
+# Copiar Angular
 COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/storage
-RUN chown -R www-data:www-data /var/www/bootstrap/cache
-RUN chmod -R 775 /var/www/storage
-RUN chmod -R 775 /var/www/bootstrap/cache
+# Configurar PHP-FPM
+RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf && \
+    echo 'clear_env = no' >> /etc/php82/php-fpm.d/www.conf
 
-# Copy nginx configuration
-COPY docker/nginx.conf /etc/nginx/sites-available/default
+# Configurar Nginx
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port
+# Script de inicio
+RUN echo '#!/bin/sh' > /start.sh && \
+    echo 'php-fpm82 -D' >> /start.sh && \
+    echo 'nginx -g "daemon off;"' >> /start.sh && \
+    chmod +x /start.sh
+
+# Crear archivo de entorno de producción
+RUN echo "APP_NAME=Laravel" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_KEY=base64:2e+a9TzD8M3eLkR5jXqVhN7wB1yC0mFpG6lKdS8rT4uA7oW9iZvPx" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_URL=https://catalogo-peliculas-udgvitual.onrender.com" >> .env && \
+    echo "LOG_CHANNEL=stderr" >> .env && \
+    echo "DB_CONNECTION=pgsql" >> .env && \
+    echo "DB_HOST=dpg-d4bgsnvpm1nc73bq8ph0-a" >> .env && \
+    echo "DB_PORT=5432" >> .env && \
+    echo "DB_DATABASE=catalogo_5uy5" >> .env && \
+    echo "DB_USERNAME=catalogo_5uy5_user" >> .env && \
+    echo "DB_PASSWORD=U51sgIhJYXoyeTdPu214V9sdgd7XRkcS" >> .env
+
 EXPOSE 10000
 
-# Startup script
-CMD sh -c "php artisan config:cache && \
-           php artisan route:cache && \
-           php artisan migrate --force && \
-           nginx -g 'daemon off;' & php-fpm"
+CMD ["/start.sh"]
