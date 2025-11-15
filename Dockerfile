@@ -28,16 +28,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copiar composer.json
 COPY backend/composer.json ./
 
-# Instalar dependencias
+# Instalar dependencias (esto usará Laravel 12 que está en tu composer.lock)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copiar el resto del código
 COPY backend/ .
 
-# Configurar Laravel para producción
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
+# SOLUCIÓN: Eliminar los comandos artisan problemáticos
+# RUN php artisan config:cache && \
+#     php artisan route:cache && \
+#     php artisan view:cache
 
 # Configurar permisos
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
@@ -64,7 +64,7 @@ RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf && \
 # Crear archivo .env para producción
 RUN echo "APP_NAME=Laravel" > .env && \
     echo "APP_ENV=production" >> .env && \
-    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_DEBUG=true" >> .env && \
     echo "APP_URL=https://catalogo-peliculas-udgvitual.onrender.com" >> .env && \
     echo "LOG_CHANNEL=stderr" >> .env && \
     echo "DB_CONNECTION=pgsql" >> .env && \
@@ -74,7 +74,7 @@ RUN echo "APP_NAME=Laravel" > .env && \
     echo "DB_USERNAME=catalogo_5uy5_user" >> .env && \
     echo "DB_PASSWORD=U51sgIhJYXoyeTdPu214V9sdgd7XRkcS" >> .env
 
-# Generar key de Laravel
+# SOLUCIÓN: Solo generar key, sin cache
 RUN php artisan key:generate --force
 
 # Configurar Nginx
