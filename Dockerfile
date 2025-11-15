@@ -2,14 +2,20 @@
 FROM node:22.19-alpine as angular-build
 
 # Instalar versiones específicas
-RUN npm install -g @angular/cli@20.3.5 npm@11.6.2
+RUN npm install -g @angular/cli@20.3.5
 
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci --legacy-peer-deps
-
 COPY frontend/ .
+
+# SOLUCIÓN: Usar npm install en lugar de npm ci
+RUN npm install --legacy-peer-deps
+
 RUN npx ng build --configuration=production --base-href="/"
+
+# Verificar estructura
+RUN echo "=== VERIFICANDO ESTRUCTURA ===" && \
+    find dist/ -name "index.html" && \
+    ls -la dist/
 
 # Stage 2: Build Laravel
 FROM php:8.2-fpm-alpine as laravel-build
@@ -38,9 +44,6 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copiar el resto del código
 COPY backend/ .
-
-# Generar key de Laravel
-RUN php artisan key:generate --force
 
 # Configurar permisos
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
@@ -71,20 +74,6 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo 'php-fpm82 -D' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
-
-# Crear archivo de entorno de producción
-RUN echo "APP_NAME=Laravel" > .env && \
-    echo "APP_ENV=production" >> .env && \
-    echo "APP_KEY=base64:2e+a9TzD8M3eLkR5jXqVhN7wB1yC0mFpG6lKdS8rT4uA7oW9iZvPx" >> .env && \
-    echo "APP_DEBUG=false" >> .env && \
-    echo "APP_URL=https://catalogo-peliculas-udgvitual.onrender.com" >> .env && \
-    echo "LOG_CHANNEL=stderr" >> .env && \
-    echo "DB_CONNECTION=pgsql" >> .env && \
-    echo "DB_HOST=dpg-d4bgsnvpm1nc73bq8ph0-a" >> .env && \
-    echo "DB_PORT=5432" >> .env && \
-    echo "DB_DATABASE=catalogo_5uy5" >> .env && \
-    echo "DB_USERNAME=catalogo_5uy5_user" >> .env && \
-    echo "DB_PASSWORD=U51sgIhJYXoyeTdPu214V9sdgd7XRkcS" >> .env
 
 EXPOSE 10000
 
