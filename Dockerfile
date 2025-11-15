@@ -3,11 +3,7 @@ FROM node:22.19-alpine as angular-build
 
 WORKDIR /app/frontend
 COPY frontend/ .
-
-# Instalar con legacy-peer-deps para evitar conflictos
 RUN npm install --legacy-peer-deps
-
-# Build con la configuración correcta
 RUN npx ng build --configuration=production --base-href="/"
 
 # Stage 2: Build Laravel
@@ -29,9 +25,14 @@ RUN apk add --no-cache \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar y instalar Laravel
-COPY backend/ .
+# Copiar composer.json
+COPY backend/composer.json ./
+
+# Instalar dependencias (se generará composer.lock automáticamente si no existe)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copiar el resto del código
+COPY backend/ .
 
 # Configurar permisos
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
