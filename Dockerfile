@@ -5,27 +5,11 @@ FROM node:22.19-alpine as angular-build
 RUN npm install -g @angular/cli@20.3.5 npm@11.6.2
 
 WORKDIR /app/frontend
-COPY frontend/ .
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --legacy-peer-deps
 
-# Build Angular con configuración de producción
+COPY frontend/ .
 RUN npx ng build --configuration=production --base-href="/"
-
-# Verificar estructura de build
-RUN echo "=== VERIFICANDO ESTRUCTURA ===" && \
-    ls -la dist/ && \
-    # Asegurar que index.html esté en la ruta correcta
-    if [ -f "dist/catalogo_frontend/browser/index.html" ]; then \
-        echo "✅ Estructura correcta"; \
-    else \
-        echo "📁 Buscando index.html..."; \
-        FIND_RESULT=$(find dist/ -name "index.html" | head -1) && \
-        echo "Encontrado en: $FIND_RESULT" && \
-        mkdir -p dist/catalogo_frontend/browser && \
-        cp "$FIND_RESULT" dist/catalogo_frontend/browser/ && \
-        # Copiar también los demás archivos
-        cp -r dist/*/* dist/catalogo_frontend/browser/ 2>/dev/null || true; \
-    fi
 
 # Stage 2: Build Laravel
 FROM php:8.2-fpm-alpine as laravel-build
@@ -46,11 +30,17 @@ RUN apk add --no-cache \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar código de Laravel
+# Copiar composer files primero
+COPY backend/composer.json backend/composer.lock* ./
+
+# Instalar dependencias de Laravel
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copiar el resto del código
 COPY backend/ .
 
-# Instalar dependencias de Laravel (evitar symfony/error-handler v7.3.2 si causa problemas)
-RUN composer install --no-dev --optimize-autoloader --prefer-dist
+# Generar key de Laravel
+RUN php artisan key:generate --force
 
 # Configurar permisos
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
@@ -81,6 +71,20 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo 'php-fpm82 -D' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
+
+# Crear archivo de entorno de producción
+RUN echo "APP_NAME=Laravel" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_KEY=base64:2e+a9TzD8M3eLkR5jXqVhN7wB1yC0mFpG6lKdS8rT4uA7oW9iZvPx" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_URL=https://catalogo-peliculas-udgvitual.onrender.com" >> .env && \
+    echo "LOG_CHANNEL=stderr" >> .env && \
+    echo "DB_CONNECTION=pgsql" >> .env && \
+    echo "DB_HOST=dpg-d4bgsnvpm1nc73bq8ph0-a" >> .env && \
+    echo "DB_PORT=5432" >> .env && \
+    echo "DB_DATABASE=catalogo_5uy5" >> .env && \
+    echo "DB_USERNAME=catalogo_5uy5_user" >> .env && \
+    echo "DB_PASSWORD=U51sgIhJYXoyeTdPu214V9sdgd7XRkcS" >> .env
 
 EXPOSE 10000
 
