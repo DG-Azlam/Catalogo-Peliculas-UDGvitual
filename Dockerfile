@@ -28,40 +28,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copiar composer.json
 COPY backend/composer.json ./
 
-# Instalar dependencias (esto usará Laravel 12 que está en tu composer.lock)
+# Instalar dependencias
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copiar el resto del código
 COPY backend/ .
 
-# SOLUCIÓN: Eliminar los comandos artisan problemáticos
-# RUN php artisan config:cache && \
-#     php artisan route:cache && \
-#     php artisan view:cache
-
-# Configurar permisos
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
-
-# Stage 3: Production
-FROM nginx:alpine
-
-# Instalar PHP-FPM
-RUN apk add --no-cache php82-fpm php82-pdo php82-pdo_pgsql php82-mbstring php82-zip php82-gd
-
-WORKDIR /var/www
-
-# Copiar Laravel
-COPY --from=laravel-build /var/www/ .
-
-# Copiar Angular
-COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
-
-# Configurar PHP-FPM
-RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf && \
-    echo 'clear_env = no' >> /etc/php82/php-fpm.d/www.conf
-
-# Crear archivo .env para producción
+# SOLUCIÓN: Generar key aquí en Stage 2 donde PHP está disponible
 RUN echo "APP_NAME=Laravel" > .env && \
     echo "APP_ENV=production" >> .env && \
     echo "APP_DEBUG=true" >> .env && \
@@ -74,8 +47,30 @@ RUN echo "APP_NAME=Laravel" > .env && \
     echo "DB_USERNAME=catalogo_5uy5_user" >> .env && \
     echo "DB_PASSWORD=U51sgIhJYXoyeTdPu214V9sdgd7XRkcS" >> .env
 
-# SOLUCIÓN: Solo generar key, sin cache
+# Generar key de Laravel
 RUN php artisan key:generate --force
+
+# Configurar permisos
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
+
+# Stage 3: Production
+FROM nginx:alpine
+
+# Instalar PHP-FPM para el runtime
+RUN apk add --no-cache php82-fpm php82-pdo php82-pdo_pgsql php82-mbstring php82-zip php82-gd
+
+WORKDIR /var/www
+
+# Copiar Laravel (incluye .env y key generada)
+COPY --from=laravel-build /var/www/ .
+
+# Copiar Angular
+COPY --from=angular-build /app/frontend/dist/catalogo_frontend/browser/ /var/www/public/
+
+# Configurar PHP-FPM
+RUN echo 'listen = 9000' >> /etc/php82/php-fpm.d/www.conf && \
+    echo 'clear_env = no' >> /etc/php82/php-fpm.d/www.conf
 
 # Configurar Nginx
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
