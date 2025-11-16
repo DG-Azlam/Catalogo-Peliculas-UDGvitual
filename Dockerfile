@@ -25,13 +25,16 @@ RUN apk add --no-cache \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar TODO el backend (incluyendo composer.lock existente)
-COPY backend/ .
+# Copiar composer.json (sin composer.lock)
+COPY backend/composer.json ./
 
-# Instalar dependencias (usará Laravel 12 del composer.lock)
+# Instalar dependencias (generará nuevo composer.lock con Laravel 12)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# SOLUCIÓN: Crear .env manualmente SIN comandos artisan
+# Copiar el resto del código
+COPY backend/ .
+
+# Crear .env manualmente
 RUN echo "APP_NAME='Catalogo Peliculas'" > .env && \
     echo "APP_ENV=production" >> .env && \
     echo "APP_DEBUG=true" >> .env && \
